@@ -12,6 +12,9 @@ interface AlbumCardProps {
 
 export const AlbumCard = ({ album }: AlbumCardProps) => {
   const navigate = useRouter();
+  const coverUrl = (album as any).coverUrl || 'https://images.pexels.com/photos/1616403/pexels-photo-1616403.jpeg?auto=compress&cs=tinysrgb&w=800';
+  const artistName = (album as any).artistName || 'Unknown';
+  const releaseDate = (album as any).releaseDate || new Date().toISOString();
 
   return (
     <motion.div
@@ -22,7 +25,7 @@ export const AlbumCard = ({ album }: AlbumCardProps) => {
     >
       <div className="relative aspect-square overflow-hidden">
         <img
-          src={album.coverUrl}
+          src={coverUrl}
           alt={album.title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
@@ -38,8 +41,8 @@ export const AlbumCard = ({ album }: AlbumCardProps) => {
       </div>
       <div className="p-4">
         <h3 className="font-semibold text-gray-900 dark:text-white truncate">{album.title}</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{album.artistName}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">{formatDate(album.releaseDate)}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{artistName}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">{formatDate(releaseDate)}</p>
       </div>
     </motion.div>
   );

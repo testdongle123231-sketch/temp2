@@ -11,6 +11,10 @@ interface ArtistCardProps {
 
 export const ArtistCard = ({ artist }: ArtistCardProps) => {
   const navigate = useRouter();
+  const verified = (artist as any).verified || false;
+  const followers = (artist as any).followers || 0;
+  const imageUrl = (artist as any).imageUrl || 'https://images.pexels.com/photos/1699161/pexels-photo-1699161.jpeg?auto=compress&cs=tinysrgb&w=800';
+  const genres = Array.isArray((artist as any).genres) ? (artist as any).genres : [];
 
   return (
     <motion.div
@@ -21,11 +25,11 @@ export const ArtistCard = ({ artist }: ArtistCardProps) => {
     >
       <div className="relative aspect-square overflow-hidden">
         <img
-          src={artist.imageUrl}
+          src={imageUrl}
           alt={artist.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
         />
-        {artist.verified && (
+        {verified && (
           <div className="absolute top-3 right-3 bg-blue-500 text-white rounded-full p-1.5">
             <UserCheck size={16} />
           </div>
@@ -33,9 +37,9 @@ export const ArtistCard = ({ artist }: ArtistCardProps) => {
       </div>
       <div className="p-4">
         <h3 className="font-semibold text-gray-900 dark:text-white truncate">{artist.name}</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">{formatNumber(artist.followers)} followers</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{formatNumber(followers)} followers</p>
         <div className="flex flex-wrap gap-1 mt-2">
-          {artist.genres.slice(0, 2).map((genre) => (
+          {genres.slice(0, 2).map((genre: string) => (
             <span
               key={genre}
               className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full"

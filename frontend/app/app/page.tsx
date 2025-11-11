@@ -5,8 +5,9 @@ import { SongCard } from '@/components/SongCard';
 import { ArtistCard } from '@/components/ArtistCard';
 import { PlaylistCard } from '@/components/PlaylistCard';
 import { AlbumCard } from '@/components/AlbumCard';
-import { mockSongs, mockArtists, mockPlaylists, mockAlbums } from '@/utils/mockData';
-import { useRef } from 'react';
+import { mockSongs, mockPlaylists } from '@/utils/mockData';
+import { useRef, useEffect, useState } from 'react';
+import { api } from '@/lib/api';
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,25 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 };
 
 export default function Home() {
+  const [artists, setArtists] = useState<any[]>([]);
+  const [albums, setAlbums] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [artistsRes, albumsRes] = await Promise.all([
+          api.get('/artists?page=1&limit=10'),
+          api.get('/albums?page=1&limit=10')
+        ]);
+        setArtists(artistsRes.data.data.artists || []);
+        setAlbums(albumsRes.data.data.albums || []);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      }
+    };
+    fetchData();
+  }, []);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <motion.div
@@ -84,7 +104,7 @@ export default function Home() {
       </Section>
 
       <Section title="Featured Artists">
-        {mockArtists.slice(0, 6).map((artist) => (
+        {artists.slice(0, 6).map((artist) => (
           <div key={artist.id} className="flex-shrink-0 w-56">
             <ArtistCard artist={artist} />
           </div>
@@ -100,7 +120,7 @@ export default function Home() {
       </Section>
 
       <Section title="New Albums">
-        {mockAlbums.map((album) => (
+        {albums.map((album) => (
           <div key={album.id} className="flex-shrink-0 w-56">
             <AlbumCard album={album} />
           </div>
