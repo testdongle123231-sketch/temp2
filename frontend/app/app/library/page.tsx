@@ -4,15 +4,42 @@ import { Library as LibraryIcon, PlusCircle } from 'lucide-react';
 import { usePlaylistStore } from '@/store/playlistStore';
 import { PlaylistCard } from '@/components/PlaylistCard';
 import { useToastStore } from '@/store/toastStore';
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
 
 export default function Library() {
   const { playlists, createPlaylist } = usePlaylistStore();
   const { addToast } = useToastStore();
+  const { user } = useAuthStore();
+  const [backendPlaylists, setBackendPlaylists] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleCreatePlaylist = () => {
-    createPlaylist('New Playlist', 'My awesome playlist');
-    addToast('Playlist created successfully', 'success');
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      if (!user) return;
+      try {
+        const res = await api.get('/playlists/my-playlists').catch(() => ({ data: { data: [] } }));
+        setBackendPlaylists(res.data.data || []);
+      } catch (error) {
+        console.error('Failed to fetch playlists:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlaylists();
+  }, [user]);
+
+  const handleCreatePlaylist = async () => {
+    try {
+      createPlaylist('New Playlist', 'My awesome playlist');
+      addToast('Playlist created successfully', 'success');
+    } catch (error) {
+      addToast('Failed to create playlist', 'error');
+    }
   };
+
+  const displayPlaylists = backendPlaylists.length > 0 ? backendPlaylists : playlists;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -33,9 +60,9 @@ export default function Library() {
           </motion.button>
         </div>
 
-        {playlists.length > 0 ? (
+        {displayPlaylists.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {playlists.map((playlist) => (
+            {displayPlaylists.map((playlist) => (
               <PlaylistCard key={playlist.id} playlist={playlist} />
             ))}
           </div>

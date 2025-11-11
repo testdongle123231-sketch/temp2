@@ -12,7 +12,7 @@ interface AuthState {
   signup: (username: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   setSession: (session: any | null) => void;
-  // updateUser: (updates: Partial<User>) => void;
+  updateUser: (updates: Partial<any>) => void;
   openAuthModal: (mode: 'signin' | 'signup') => void;
   closeAuthModal: () => void;
   setAuthMode: (mode: 'signin' | 'signup') => void;
@@ -90,6 +90,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
       } else {
         set({ user: null, isAuthenticated: false });
       }
+    },
+
+    updateUser: (updates) => {
+      set((state) => ({
+        user: state.user ? { ...state.user, ...updates } : null,
+      }));
     },
 
     openAuthModal: (mode) => set({ isAuthModalOpen: true, authMode: mode }),

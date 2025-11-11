@@ -2,20 +2,49 @@
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { UserCheck, Play } from 'lucide-react';
-import { mockArtists, mockAlbums, mockSongs } from '@/utils/mockData';
 import { formatNumber } from '@/utils/helpers';
 import { SongCard } from '@/components/SongCard';
 import { AlbumCard } from '@/components/AlbumCard';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 
 export default function ArtistDetail() {
   const params = useParams();
   const id = params?.artistId as string;
   const [isFollowing, setIsFollowing] = useState(false);
+  const [artist, setArtist] = useState<any>(null);
+  const [artistAlbums, setArtistAlbums] = useState<any[]>([]);
+  const [artistSongs, setArtistSongs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const artist = mockArtists.find((a) => a.id === id);
-  const artistAlbums = mockAlbums.filter((album) => album.artistId === id);
-  const artistSongs = mockSongs.filter((song) => song.artistId === id);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [artistRes, albumsRes, songsRes] = await Promise.all([
+          api.get(`/artists/${id}`).catch(() => ({ data: { data: null } })),
+          api.get(`/albums?artistId=${id}`).catch(() => ({ data: { data: [] } })),
+          api.get(`/songs?artistId=${id}`).catch(() => ({ data: { data: [] } }))
+        ]);
+
+        setArtist(artistRes.data.data);
+        setArtistAlbums(albumsRes.data.data || []);
+        setArtistSongs(songsRes.data.data || []);
+      } catch (error) {
+        console.error('Failed to fetch artist:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
 
   if (!artist) {
     return (
@@ -30,22 +59,22 @@ export default function ArtistDetail() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="relative h-96 rounded-3xl overflow-hidden mb-8">
           <img
-            src={artist.imageUrl}
+            src={artist.imageUrl || 'https://images.pexels.com/photos/1699161/pexels-photo-1699161.jpeg?auto=compress&cs=tinysrgb&w=800'}
             alt={artist.name}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-linear-to-t from-black via-black/50 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-8">
             <div className="flex items-center gap-2 mb-4">
-              {artist.verified && (
+              {(artist.verified || artist.isVerified) && (
                 <div className="bg-blue-500 text-white rounded-full p-1.5">
                   <UserCheck size={20} />
                 </div>
               )}
-              <span className="text-white font-semibold">Verified Artist</span>
+              {(artist.verified || artist.isVerified) && <span className="text-white font-semibold">Verified Artist</span>}
             </div>
             <h1 className="text-6xl font-bold text-white mb-4">{artist.name}</h1>
-            <p className="text-xl text-white/90">{formatNumber(artist.followers)} followers</p>
+            <p className="text-xl text-white/90">{formatNumber(artist.followers || 0)} followers</p>
           </div>
         </div>
 
@@ -72,9 +101,9 @@ export default function ArtistDetail() {
         </div>
 
         <div className="mb-8">
-          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{artist.bio}</p>
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{artist.bio || 'No bio available'}</p>
           <div className="flex flex-wrap gap-2 mt-4">
-            {artist.genres.map((genre) => (
+            {(artist.genres || []).map((genre: string) => (
               <span
                 key={genre}
                 className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium"

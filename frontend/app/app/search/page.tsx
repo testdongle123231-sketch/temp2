@@ -1,36 +1,59 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Search as SearchIcon } from 'lucide-react';
 import { SongCard } from '@/components/SongCard';
 import { ArtistCard } from '@/components/ArtistCard';
 import { PlaylistCard } from '@/components/PlaylistCard';
 import { AlbumCard } from '@/components/AlbumCard';
-import { mockSongs, mockArtists, mockPlaylists, mockAlbums } from '@/utils/mockData';
+import { mockPlaylists } from '@/utils/mockData';
+import { api } from '@/lib/api';
 
 type Tab = 'all' | 'songs' | 'artists' | 'albums' | 'playlists';
 
 export default function Search() {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<Tab>('all');
+  const [filteredSongs, setFilteredSongs] = useState<any[]>([]);
+  const [filteredArtists, setFilteredArtists] = useState<any[]>([]);
+  const [filteredAlbums, setFilteredAlbums] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const tabs: Tab[] = ['all', 'songs', 'artists', 'albums', 'playlists'];
 
-  const filteredSongs = mockSongs.filter(
-    (song) =>
-      song.title.toLowerCase().includes(query.toLowerCase()) ||
-      song.artist.toLowerCase().includes(query.toLowerCase())
-  );
+  const searchBackend = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      setFilteredSongs([]);
+      setFilteredArtists([]);
+      setFilteredAlbums([]);
+      return;
+    }
 
-  const filteredArtists = mockArtists.filter((artist) =>
-    artist.name.toLowerCase().includes(query.toLowerCase())
-  );
+    setLoading(true);
+    try {
+      const [songsRes, artistsRes, albumsRes] = await Promise.all([
+        api.get(`/songs/search?q=${encodeURIComponent(searchQuery)}`).catch(() => ({ data: { data: [] } })),
+        api.get(`/artists/search?q=${encodeURIComponent(searchQuery)}`).catch(() => ({ data: { data: [] } })),
+        api.get(`/albums/search?q=${encodeURIComponent(searchQuery)}`).catch(() => ({ data: { data: [] } }))
+      ]);
 
-  const filteredAlbums = mockAlbums.filter(
-    (album) =>
-      album.title.toLowerCase().includes(query.toLowerCase()) ||
-      album.artistName.toLowerCase().includes(query.toLowerCase())
-  );
+      setFilteredSongs(songsRes.data.data || []);
+      setFilteredArtists(artistsRes.data.data || []);
+      setFilteredAlbums(albumsRes.data.data || []);
+    } catch (error) {
+      console.error('Search failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchBackend(query);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query, searchBackend]);
 
   const filteredPlaylists = mockPlaylists.filter((playlist) =>
     playlist.name.toLowerCase().includes(query.toLowerCase())

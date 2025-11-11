@@ -2,22 +2,36 @@
 import { motion } from 'framer-motion';
 import { Heart, Play } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { mockSongs } from '@/utils/mockData';
 import { SongCard } from '@/components/SongCard';
 import { usePlayerStore } from '@/store/playerStore';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 
 export default function LikedSongs() {
   const { user } = useAuthStore();
   const { setQueue, setCurrentSong } = usePlayerStore();
   const navigate = useRouter();
+  const [likedSongs, setLikedSongs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (!user) {
-    navigate.push('/');
-    return null;
-  }
-
-  const likedSongs = mockSongs.filter((s) => user.likedSongs.includes(s.id));
+  useEffect(() => {
+    const fetchLikedSongs = async () => {
+      if (!user) {
+        navigate.push('/');
+        return;
+      }
+      try {
+        const res = await api.get('/track-likes/my-liked-tracks').catch(() => ({ data: { data: [] } }));
+        setLikedSongs(res.data.data || []);
+      } catch (error) {
+        console.error('Failed to fetch liked songs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLikedSongs();
+  }, [user, navigate]);
 
   const handlePlayAll = () => {
     if (likedSongs.length > 0) {

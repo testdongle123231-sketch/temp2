@@ -7,6 +7,8 @@ import { usePlaylistStore } from '@/store/playlistStore';
 import { usePlayerStore } from '@/store/playerStore';
 import { useToastStore } from '@/store/toastStore';
 import { formatDuration } from '@/utils/helpers';
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 
 export default function PlaylistDetail() {
   const params = useParams();
@@ -15,8 +17,35 @@ export default function PlaylistDetail() {
   const { getPlaylistById, removeSongFromPlaylist, deletePlaylist } = usePlaylistStore();
   const { setQueue, setCurrentSong } = usePlayerStore();
   const { addToast } = useToastStore();
+  const [playlist, setPlaylist] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const playlist = getPlaylistById(id as string);
+  useEffect(() => {
+    const fetchPlaylist = async () => {
+      try {
+        const res = await api.get(`/playlists/${id}`).catch(() => null);
+        if (res) {
+          setPlaylist(res.data.data);
+        } else {
+          setPlaylist(getPlaylistById(id));
+        }
+      } catch (error) {
+        console.error('Failed to fetch playlist:', error);
+        setPlaylist(getPlaylistById(id));
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlaylist();
+  }, [id, getPlaylistById]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
 
   if (!playlist) {
     return (
@@ -26,10 +55,12 @@ export default function PlaylistDetail() {
     );
   }
 
+  const songs = playlist.playlistItems || playlist.songs || [];
+
   const handlePlay = () => {
-    if (playlist.songs.length > 0) {
-      setQueue(playlist.songs);
-      setCurrentSong(playlist.songs[0]);
+    if (songs.length > 0) {
+      setQueue(songs);
+      setCurrentSong(songs[0]);
       addToast('Playing playlist', 'success');
     }
   };
@@ -49,7 +80,7 @@ export default function PlaylistDetail() {
       >
         <div className="flex flex-col md:flex-row gap-6 mb-8">
           <img
-            src={playlist.coverUrl}
+            src={playlist.coverUrl || 'https://images.pexels.com/photos/1616403/pexels-photo-1616403.jpeg?auto=compress&cs=tinysrgb&w=800'}
             alt={playlist.name}
             className="w-64 h-64 rounded-2xl shadow-2xl object-cover"
           />
@@ -58,9 +89,9 @@ export default function PlaylistDetail() {
             <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
               {playlist.name}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">{playlist.description}</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">{playlist.description || ''}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {playlist.songs.length} songs
+              {(playlist.playlistItems || playlist.songs || []).length} songs
             </p>
           </div>
         </div>
@@ -95,29 +126,29 @@ export default function PlaylistDetail() {
             <div className="col-span-3">Album</div>
             <div className="col-span-2 text-right">Duration</div>
           </div>
-          {playlist.songs.map((song, index) => (
+          {songs.map((song: any, index: number) => (
             <motion.div
               key={song.id}
               whileHover={{ backgroundColor: 'rgba(249, 115, 22, 0.1)' }}
               className="grid grid-cols-12 gap-4 p-4 border-b border-gray-100 dark:border-gray-700 cursor-pointer group"
               onClick={() => {
-                setQueue(playlist.songs);
+                setQueue(songs);
                 setCurrentSong(song);
               }}
             >
               <div className="col-span-1 text-gray-600 dark:text-gray-400">{index + 1}</div>
               <div className="col-span-6 flex items-center gap-3">
-                <img src={song.coverUrl} alt={song.title} className="w-12 h-12 rounded object-cover" />
+                <img src={song.coverUrl || 'https://images.pexels.com/photos/3394650/pexels-photo-3394650.jpeg?auto=compress&cs=tinysrgb&w=400'} alt={song.title} className="w-12 h-12 rounded object-cover" />
                 <div>
                   <p className="font-semibold text-gray-900 dark:text-white">{song.title}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{song.artist}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{song.artist || 'Unknown'}</p>
                 </div>
               </div>
               <div className="col-span-3 flex items-center text-gray-600 dark:text-gray-400">
-                {song.album}
+                {song.album || 'Unknown'}
               </div>
               <div className="col-span-2 flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400">{formatDuration(song.duration)}</span>
+                <span className="text-gray-600 dark:text-gray-400">{formatDuration(song.duration || 0)}</span>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

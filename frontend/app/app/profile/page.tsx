@@ -5,21 +5,47 @@ import { useAuthStore } from '@/store/authStore';
 import { usePlaylistStore } from '@/store/playlistStore';
 import { useRouter } from 'next/navigation';
 import { PlaylistCard } from '@/components/PlaylistCard';
-import { mockSongs } from '@/utils/mockData';
 import { SongCard } from '@/components/SongCard';
+import { useState, useEffect } from 'react';
+import { api } from '@/lib/api';
 
 export default function Profile() {
   const { user, logout } = useAuthStore();
   const { playlists } = usePlaylistStore();
   const navigate = useRouter();
+  const [userPlaylists, setUserPlaylists] = useState<any[]>([]);
+  const [likedSongs, setLikedSongs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) {
+        navigate.push('/');
+        return;
+      }
+
+      try {
+        const [playlistsRes, likedRes] = await Promise.all([
+          api.get('/playlists/my-playlists').catch(() => ({ data: { data: [] } })),
+          api.get('/track-likes/my-liked-tracks').catch(() => ({ data: { data: [] } }))
+        ]);
+
+        setUserPlaylists(playlistsRes.data.data || []);
+        setLikedSongs(likedRes.data.data || []);
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+        setUserPlaylists(playlists.filter((p) => p.createdBy === user.id));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user, navigate, playlists]);
 
   if (!user) {
-    navigate.push('/');
     return null;
   }
-
-  const userPlaylists = playlists.filter((p) => p.createdBy === user.id);
-  const likedSongs = mockSongs.filter((s) => user.likedSongs.includes(s.id));
 
   const handleLogout = () => {
     logout();
@@ -33,21 +59,21 @@ export default function Profile() {
           <div className="absolute inset-0 bg-black/10" />
           <div className="relative flex flex-col md:flex-row items-center gap-6">
             <img
-              src={user.photoUrl}
+              src={user.photoUrl || 'https://images.pexels.com/photos/1699161/pexels-photo-1699161.jpeg?auto=compress&cs=tinysrgb&w=400'}
               alt={user.username}
               className="w-32 h-32 rounded-full border-4 border-white shadow-2xl object-cover"
             />
             <div className="flex-1 text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
                 <h1 className="text-4xl font-bold text-white">{user.username}</h1>
-                {user.isPremium && (
+                {(user.isPremium || user.premiumStatus) && (
                   <div className="bg-yellow-400 text-gray-900 rounded-full p-1.5">
                     <Crown size={20} />
                   </div>
                 )}
               </div>
               <p className="text-white/90 mb-4">{user.email}</p>
-              <p className="text-white/80">{user.bio}</p>
+              <p className="text-white/80">{user.bio || ''}</p>
             </div>
             <div className="flex gap-2">
               <motion.button
@@ -69,7 +95,7 @@ export default function Profile() {
           </div>
         </div>
 
-        {!user.isPremium && (
+        {!(user.isPremium || user.premiumStatus) && (
           <motion.div
             whileHover={{ scale: 1.02 }}
             className="bg-linear-to-r from-yellow-400 via-orange-500 to-pink-500 rounded-2xl p-6 mb-8 cursor-pointer"
@@ -99,7 +125,7 @@ export default function Profile() {
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg">
             <p className="text-gray-600 dark:text-gray-400 mb-2">Following</p>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">
-              {user.followedArtists.length}
+              {(user.followedArtists || []).length}
             </p>
           </div>
         </div>
